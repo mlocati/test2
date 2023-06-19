@@ -1,0 +1,35 @@
+{
+    "name" : "mlocati-concrete5-packages/login_logout_block",
+    "description" : "A package for ConcreteCMS to add a login/logout block to pages",
+    "type" : "concrete5-package",
+    "keywords": [
+        "concrete5",
+        "Concrete",
+        "ConcreteCMS",
+        "Concrete CMS",
+        "package",
+        "login",
+        "logout",
+        "block"
+    ],
+    "homepage": "https://github.com/concrete5-community/login_logout_block",
+    "license" : "MIT",
+    "authors" : [
+        {
+            "name" : "Michele Locati",
+            "email" : "michele@locati.it",
+            "homepage" : "https://mlocati.github.io",
+            "role" : "Author"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/concrete5-community/login_logout_block/issues",
+        "source": "https://github.com/concrete5-community/login_logout_block"
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "prepend-autoloader": false,
+        "sort-packages": true
+    },
+    "$schema": "https://raw.githubusercontent.com/composer/composer/main/res/composer-schema.json"
+}

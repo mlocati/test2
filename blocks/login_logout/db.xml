@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schema
+  xmlns="http://www.concrete5.org/doctrine-xml/0.5"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.concrete5.org/doctrine-xml/0.5 https://concretecms.github.io/doctrine-xml/doctrine-xml-0.5.xsd"
+>
+    <table name="btLoginLogout">
+        <field name="bID" type="integer">
+            <unsigned />
+            <key />
+        </field>
+        <field name="loginFormat" type="integer">
+            <unsigned />
+            <notnull />
+        </field>
+        <field name="loginPlainText" type="string" size="255">
+            <notnull />
+        </field>
+        <field name="loginPlainTag" type="string" size="10">
+            <notnull />
+        </field>
+        <field name="loginRich" type="text">
+            <notnull />
+        </field>
+        <field name="logoutFormat" type="integer">
+            <unsigned />
+            <notnull />
+        </field>
+        <field name="logoutPlainText" type="string" size="255">
+            <notnull />
+        </field>
+        <field name="logoutPlainTag" type="string" size="10">
+            <notnull />
+        </field>
+        <field name="logoutRich" type="text">
+            <notnull />
+        </field>
+    </table>
+</schema>
