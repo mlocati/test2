@@ -30,7 +30,7 @@ $generateHtmlEditor = function ($name, $value) use ($editor) {
             [
                 'enterMode' => 2, // CKEDITOR.ENTER_BR'
             ],
-            $value,
+            $value
         );
     }
 
