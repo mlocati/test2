@@ -5,8 +5,11 @@ namespace Concrete\Package\LoginLogoutBlock\Block\LoginLogout;
 use Concrete\Core\Block\BlockController;
 use Concrete\Core\Editor\LinkAbstractor;
 use Concrete\Core\Error\UserMessageException;
+use Concrete\Core\Http\ResponseFactoryInterface;
 use Concrete\Core\Localization\Localization;
 use Concrete\Core\Page\Page;
+use Concrete\Core\Url\Resolver\Manager\ResolverManagerInterface;
+use Concrete\Core\User\PostLoginLocation;
 use Concrete\Core\User\User;
 use Concrete\Core\Validation\CSRF\Token;
 
@@ -35,6 +38,21 @@ class Controller extends BlockController
     const DEFAULT_PLAINTEXT_TAG = 'span';
 
     /**
+     * @var int
+     */
+    const WHEREAFTER_DEFAULT = 1;
+
+    /**
+     * @var int
+     */
+    const WHEREAFTER_SAMEPAGE = 2;
+
+    /**
+     * @var int
+     */
+    const WHEREAFTER_SAMEURL = 3;
+
+    /**
      * {@inheritdoc} see \Concrete\Core\Block\BlockController::$helpers
      */
     protected $helpers = [];
@@ -47,7 +65,7 @@ class Controller extends BlockController
     /**
      * {@inheritdoc} see \Concrete\Core\Block\BlockController::$btInterfaceHeight
      */
-    protected $btInterfaceHeight = 400;
+    protected $btInterfaceHeight = 600;
 
     /**
      * {@inheritdoc} see \Concrete\Core\Block\BlockController::$btCacheBlockOutput
@@ -73,6 +91,11 @@ class Controller extends BlockController
      * @var int|string|null
      */
     protected $loginFormat;
+
+    /**
+     * @var int|string|null
+     */
+    protected $whereAfterLogin;
 
     /**
      * @var string|null
@@ -126,7 +149,7 @@ class Controller extends BlockController
      */
     public function getBlockTypeDescription()
     {
-        return t('Adds a Login/Logout block type');
+        return t('Link to login/logout users');
     }
 
     public function view()
@@ -136,6 +159,7 @@ class Controller extends BlockController
         $plainText = '';
         $plainTag = '';
         $rich = '';
+        $preLinkAction = null;
         if ($me->isRegistered()) {
             $operation = 'logout';
             $format = (int) $this->logoutFormat;
@@ -160,6 +184,13 @@ class Controller extends BlockController
             $format = (int) $this->loginFormat;
             if ($format !== static::FORMAT_NONE) {
                 $url = (string) $this->app->make('url/manager')->resolve(['/login']);
+                if ((int) $this->whereAfterLogin !== static::WHEREAFTER_DEFAULT) {
+                    $token = $this->app->make(Token::class);
+                    $preLinkAction = [
+                        'url' => (string) $this->getActionURL('store_page_for_login'),
+                        'params' => '&' . rawurlencode($token::DEFAULT_TOKEN_NAME) . '=' . rawurlencode($token->generate('store_page_for_login')),
+                    ];
+                }
             }
             switch ($format) {
                 case static::FORMAT_TEXT:
@@ -186,11 +217,46 @@ class Controller extends BlockController
         $this->set('plainText', $plainText);
         $this->set('plainTag', $plainTag);
         $this->set('rich', $rich);
+        $this->set('uniqueBlockID', $this->getUniqueBlockID());
+        $this->set('preLinkAction', $preLinkAction);
+    }
+
+    public function action_store_page_for_login($bID = '')
+    {
+        if ((int) $this->bID !== (int) $this->bID) {
+            return $this->view();
+        }
+        $token = $this->app->make(Token::class);
+        if (!$token->validate('store_page_for_login')) {
+            throw new UserMessageException($token->getErrorMessage());
+        }
+        $postLoginUrl = '';
+        switch ((int) $this->whereAfterLogin) {
+            case static::WHEREAFTER_SAMEPAGE:
+                $page = Page::getCurrentPage();
+                if ($page && !$page->isError()) {
+                    $postLoginUrl = (string) $this->app->make(ResolverManagerInterface::class)->resolve([$page]);
+                }
+                break;
+            case static::WHEREAFTER_SAMEURL:
+                $currentUrl = $this->request->request->get('currentUrl');
+                if (is_string($currentUrl)) {
+                    $postLoginUrl = $currentUrl;
+                }
+                break;
+        }
+        if ($postLoginUrl !== '') {
+            $postLoginLocation = $this->app->make(PostLoginLocation::class);
+            $postLoginLocation->setSessionPostLoginUrl($postLoginUrl);
+        }
+
+        return $this->app->make(ResponseFactoryInterface::class)->json($postLoginUrl !== '');
     }
 
     public function add()
     {
         $this->loginFormat = static::FORMAT_TEXT;
+        $this->whereAfterLogin = static::WHEREAFTER_DEFAULT;
         $this->loginPlainTag = static::DEFAULT_PLAINTEXT_TAG;
         $this->logoutFormat = static::FORMAT_TEXT;
         $this->logoutPlainTag = static::DEFAULT_PLAINTEXT_TAG;
@@ -202,9 +268,11 @@ class Controller extends BlockController
     {
         $this->set('form', $this->app->make('helper/form'));
         $this->set('editor', $this->app->make('editor'));
-        $this->set('formats', $this->getFormatsDictionary());
-        $this->set('tags', $this->getTagsDictionary());
+        $this->set('formatDictionary', $this->getFormatDictionary());
+        $this->set('whereAfterDictionary', $this->getWhereAfterDictionary());
+        $this->set('tagDictionary', $this->getTagDictionary());
         $this->set('loginFormat', (int) $this->loginFormat);
+        $this->set('whereAfterLogin', (int) $this->whereAfterLogin);
         $this->set('loginPlainText', (string) $this->loginPlainText);
         $this->set('defaultLoginPlainText', $this->getDefaultLoginPlainText());
         $this->set('loginPlainTag', (string) $this->loginPlainTag);
@@ -262,7 +330,7 @@ class Controller extends BlockController
     /**
      * @return array
      */
-    protected function getFormatsDictionary()
+    protected function getFormatDictionary()
     {
         return [
             static::FORMAT_NONE => t('Hidden'),
@@ -274,7 +342,19 @@ class Controller extends BlockController
     /**
      * @return array
      */
-    protected function getTagsDictionary()
+    protected function getWhereAfterDictionary()
+    {
+        return [
+            static::WHEREAFTER_DEFAULT => t('The default page'),
+            static::WHEREAFTER_SAMEPAGE => t('This same page'),
+            static::WHEREAFTER_SAMEURL => t('This same page (including all parameters)'),
+        ];
+    }
+
+    /**
+     * @return array
+     */
+    protected function getTagDictionary()
     {
         $result = [];
         foreach (['span', 'div', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'] as $tag) {
@@ -291,22 +371,30 @@ class Controller extends BlockController
      */
     protected function normalizeArgs(array $args)
     {
-        $formats = array_map('intval', array_keys($this->getFormatsDictionary()));
-        $tags = array_keys($this->getTagsDictionary());
+        $formatDictionary = array_map('intval', array_keys($this->getFormatDictionary()));
+        $whereAfterDictionary = array_map('intval', array_keys($this->getWhereAfterDictionary()));
+        $tagDictionary = array_keys($this->getTagDictionary());
         $errors = $this->app->make('helper/validation/error');
 
         $normalized = [];
-        foreach (['loginFormat', 'logoutFormat'] as $field) {
+        foreach (['loginFormat', 'whereAfterLogin', 'logoutFormat'] as $field) {
             $normalized[$field] = isset($args[$field]) && is_numeric($args[$field]) ? (int) $args[$field] : 0;
         }
         foreach (['loginPlainText', 'loginPlainTag', 'loginRich', 'logoutPlainText', 'logoutPlainTag', 'logoutRich'] as $field) {
             $normalized[$field] = isset($args[$field]) && is_string($args[$field]) ? trim($args[$field]) : '';
         }
 
-        if (!in_array($normalized['loginFormat'], $formats, true)) {
+        if (!in_array($normalized['loginFormat'], $formatDictionary, true)) {
             $errors->add(t('Please specify the format of the login link'));
         }
-        if (!in_array($normalized['loginPlainTag'], $tags, true)) {
+        if (!in_array($normalized['whereAfterLogin'], $whereAfterDictionary, true)) {
+            if ($normalized['loginFormat'] === static::FORMAT_TEXT || $normalized['loginFormat'] === static::FORMAT_HTML) {
+                $errors->add(t('Please specify where to redirect users after the login'));
+            } else {
+                $normalized['loginFormat'] = static::WHEREAFTER_DEFAULT;
+            }
+        }
+        if (!in_array($normalized['loginPlainTag'], $tagDictionary, true)) {
             if ($normalized['loginFormat'] === static::FORMAT_TEXT) {
                 $errors->add(t('Please specify the HTML tag for the login link'));
             } else {
@@ -321,10 +409,10 @@ class Controller extends BlockController
             $normalized['loginRich'] = LinkAbstractor::translateTo($normalized['loginRich']);
         }
 
-        if (!in_array($normalized['logoutFormat'], $formats, true)) {
+        if (!in_array($normalized['logoutFormat'], $formatDictionary, true)) {
             $errors->add(t('Please specify the format of the logout link'));
         }
-        if (!in_array($normalized['logoutPlainTag'], $tags, true)) {
+        if (!in_array($normalized['logoutPlainTag'], $tagDictionary, true)) {
             if ($normalized['logoutFormat'] === static::FORMAT_TEXT) {
                 $errors->add(t('Please specify the HTML tag for the logout link'));
             } else {
@@ -340,5 +428,15 @@ class Controller extends BlockController
         }
 
         return $errors->has() ? $errors : $normalized;
+    }
+
+    /**
+     * @return int
+     */
+    protected function getUniqueBlockID()
+    {
+        $proxyBlock = $this->getBlockObject()->getProxyBlock();
+
+        return (int) ($proxyBlock ? $proxyBlock->getBlockID() : $this->bID);
     }
 }

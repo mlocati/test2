@@ -9,9 +9,11 @@ defined('C5_EXECUTE') or die('Access Denied.');
  * @var Concrete\Package\LoginLogoutBlock\Block\LoginLogout\Controller $controller
  * @var Concrete\Core\Form\Service\Form $form
  * @var Concrete\Core\Editor\EditorInterface $editor
- * @var array $formats
- * @var array $tags
+ * @var array $formatDictionary
+ * @var array $whereAfterDictionary
+ * @var array $tagDictionary
  * @var int $loginFormat
+ * @var int $whereAfterLogin
  * @var string $loginPlainText
  * @var string $defaultLoginPlainText
  * @var string $loginPlainTag
@@ -53,7 +55,11 @@ $generateHtmlEditor = function ($name, $value) use ($editor) {
             <td>
                 <div class="form-group">
                     <?= $form->label('loginFormat', t('Format')) ?>
-                    <?= $form->select('loginFormat', $formats, $loginFormat) ?>
+                    <?= $form->select('loginFormat', $formatDictionary, $loginFormat) ?>
+                </div>
+                <div id="loginPageAfter" class="form-group"<?= $loginFormat === $controller::FORMAT_NONE ? '' : ' style="display: none"' ?>>
+                    <?= $form->label('whereAfterLogin', t('After the login users should go to')) ?>
+                    <?= $form->select('whereAfterLogin', $whereAfterDictionary, $whereAfterLogin) ?>
                 </div>
                 <div id="loginFormat-plainText"<?= $loginFormat === $controller::FORMAT_TEXT ? '' : ' style="display: none"' ?>>
                     <div class="form-group">
@@ -62,7 +68,7 @@ $generateHtmlEditor = function ($name, $value) use ($editor) {
                     </div>
                     <div class="form-group">
                         <?= $form->label('loginPlainTag', t('HTML Tag')) ?>
-                        <?= $form->select('loginPlainTag', $tags, $loginPlainTag) ?>
+                        <?= $form->select('loginPlainTag', $tagDictionary, $loginPlainTag) ?>
                     </div>
                 </div>
                 <div id="loginFormat-righText"<?= $loginFormat === $controller::FORMAT_HTML ? '' : ' style="display: none"' ?>>
@@ -75,7 +81,7 @@ $generateHtmlEditor = function ($name, $value) use ($editor) {
             <td>
                 <div class="form-group">
                     <?= $form->label('logoutFormat', t('Format')) ?>
-                    <?= $form->select('logoutFormat', $formats, $logoutFormat) ?>
+                    <?= $form->select('logoutFormat', $formatDictionary, $logoutFormat) ?>
                 </div>
                 <div id="logoutFormat-plainText"<?= $logoutFormat === $controller::FORMAT_TEXT ? '' : ' style="display: none"' ?>>
                     <div class="form-group">
@@ -84,7 +90,7 @@ $generateHtmlEditor = function ($name, $value) use ($editor) {
                     </div>
                     <div class="form-group">
                         <?= $form->label('logoutPlainTag', t('HTML Tag')) ?>
-                        <?= $form->select('logoutPlainTag', $tags, $logoutPlainTag) ?>
+                        <?= $form->select('logoutPlainTag', $tagDictionary, $logoutPlainTag) ?>
                     </div>
                 </div>
                 <div id="logoutFormat-righText"<?= $logoutFormat === $controller::FORMAT_HTML ? '' : ' style="display: none"' ?>>
@@ -107,8 +113,9 @@ function updateView()
     var L = ['login', 'logout'];
     for (var i = 0; i < L.length; i++) {
         var v = parseInt($('#' +  L[i] + 'Format').val());
-        $('#' +  L[i] + 'Format-plainText').toggle(v === <?= $controller::FORMAT_TEXT ?>);
-        $('#' +  L[i] + 'Format-righText').toggle(v === <?= $controller::FORMAT_HTML ?>);
+        $('#' + L[i] + 'PageAfter').toggle(v !== <?= $controller::FORMAT_NONE ?>);
+        $('#' + L[i] + 'Format-plainText').toggle(v === <?= $controller::FORMAT_TEXT ?>);
+        $('#' + L[i] + 'Format-righText').toggle(v === <?= $controller::FORMAT_HTML ?>);
     }
 }
 
