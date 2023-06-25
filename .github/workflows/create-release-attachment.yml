@@ -18,6 +18,13 @@ jobs:
           coverage: none
       - name: Checkout
         uses: actions/checkout@v3
+      - name: Inspect
+        run : |
+          which php
+          php --version
+          which composer
+          composer --version
+          printf 'PATH=%s' "$PATH"
       - name: Create and attach ZIP
         uses: concrete5-community/gh-package-release-attach@main
         env:
@@ -26,3 +33,4 @@ jobs:
           remove-files: |
             composer.json
             composer.lock
+          verbose: 1
