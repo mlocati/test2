@@ -22,6 +22,10 @@
             "role" : "Author"
         }
     ],
+    "require": {
+        "concrete5/core": "^8.5 || ^9",
+        "mlocati/payway": "^1"
+    },
     "support": {
         "issues": "https://github.com/concrete5-community/login_logout_block/issues",
         "source": "https://github.com/concrete5-community/login_logout_block"
